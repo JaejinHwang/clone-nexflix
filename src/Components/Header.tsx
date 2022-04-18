@@ -19,6 +19,7 @@ const Nav = styled(motion.nav)`
 
 const Col = styled.div`
   display: flex;
+  gap: 10px;
   align-items: center;
 `;
 
@@ -198,6 +199,7 @@ function Header() {
             placeholder="Search for content"
           />
         </Search>
+        <div> Search with Keyword</div>
       </Col>
     </Nav>
   );

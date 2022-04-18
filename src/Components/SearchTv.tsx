@@ -246,7 +246,7 @@ const SearchTv = ({ search }: any) => {
   return (
     <>
       <SliderTitle onClick={incraseIndex}>
-        {searchMovieData?.results.length} Movies related with '{search}'
+        {searchMovieData?.results.length} TV Shows related with '{search}'
       </SliderTitle>
       <Slider>
         <Prev onClick={decraseIndex}>
