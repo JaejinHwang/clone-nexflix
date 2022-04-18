@@ -7,7 +7,7 @@ import "remixicon/fonts/remixicon.css";
 
 function App() {
   return (
-    <Router>
+    <Router basename={process.env.PUBLIC_URL}>
       <Header />
       <Routes>
         <Route path="/tv" element={<Tv />}>
@@ -16,10 +16,7 @@ function App() {
           <Route path="/tv/top_rated/:tvId" element={<Tv />} />
           <Route path="/tv/on_the_air/:tvId" element={<Tv />} />
         </Route>
-        <Route path="/search" element={<Search />}>
-          <Route path="/search/:movieId" element={<Search />} />
-          <Route path="/search/:tvId" element={<Search />} />
-        </Route>
+        <Route path="/search" element={<Search />} />
         <Route path="/" element={<Home />}>
           <Route path="/movies/popular/:movieId" element={<Home />} />
           <Route path="/movies/upcoming/:movieId" element={<Home />} />

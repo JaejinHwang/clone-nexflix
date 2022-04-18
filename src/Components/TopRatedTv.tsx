@@ -3,13 +3,7 @@ import { useState } from "react";
 import { useQuery } from "react-query";
 import { useMatch, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import {
-  GetPopularMovies,
-  GetPopularTvs,
-  GetTopRatedTvs,
-  IMovie,
-  ITv,
-} from "../api";
+import { GetTopRatedTvs, ITv } from "../api";
 import { makeMovieImageUrl } from "../utils";
 
 const SliderTitle = styled.h3`
