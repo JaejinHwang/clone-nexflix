@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery } from "react-query";
 import { useMatch, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { GetUpcomingMovies, IMovie } from "../api";
+import { GetTopRatedMovies, GetUpcomingMovies, IMovie } from "../api";
 import { makeMovieImageUrl } from "../utils";
 
 const SliderTitle = styled.h3`
@@ -17,6 +17,29 @@ const Slider = styled.div`
   margin-bottom: 300px;
 `;
 
+const Next = styled(motion.div)`
+  height: 200px;
+  background-color: rgba(0, 0, 0, 0.7);
+  width: 50px;
+  position: absolute;
+  z-index: 10;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+const Prev = styled(motion.div)`
+  height: 200px;
+  background-color: rgba(0, 0, 0, 0.7);
+  width: 50px;
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
 const Row = styled(motion.div)<{ offset: number }>`
   display: grid;
   gap: 10px;
@@ -27,10 +50,11 @@ const Row = styled(motion.div)<{ offset: number }>`
 
 const PosterCard = styled(motion.div)<{ bgurl: string }>`
   background-image: url(${(props) => props.bgurl});
+  background-size: cover;
   display: flex;
   align-items: flex-end;
-  background-size: cover;
   background-position: center center;
+  /* position: relative; */
   height: 200px;
   &: first-child {
     transform-origin: center left;
@@ -41,11 +65,12 @@ const PosterCard = styled(motion.div)<{ bgurl: string }>`
 `;
 
 const Info = styled(motion.div)`
-  opacity: 0;
   padding: 10px;
+  opacity: 0;
   height: 40px;
-  background-color: ${(props) => props.theme.black.lighter};
+  background-color: ${(props) => props.theme.black.veryDark};
   position: absolute;
+  /* bottom: 0px; */
   width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -53,12 +78,17 @@ const Info = styled(motion.div)`
   font-size: 16px;
 `;
 
-const Detail = styled(motion.div)<{ scroll: number; margin: number }>`
+const Detail = styled(motion.div)<{
+  scroll: number;
+  margin: number;
+  height: number;
+}>`
   width: 500px;
   height: 700px;
-  background-color: grey;
+  background-color: ${(props) => props.theme.black.veryDark};
   position: absolute;
-  top: ${(props) => props.scroll + props.margin}px;
+  top: ${(props) => props.scroll + props.margin - props.height}px;
+
   left: 0;
   right: 0;
   /* bottom: 0; */
@@ -114,14 +144,18 @@ const DetailIntroduction = styled.div`
 `;
 
 const sliderVariants = {
-  hidden: {
-    x: window.outerWidth + 10,
+  hidden: (direction: boolean) => {
+    return {
+      x: direction ? window.outerWidth + 10 : -(window.outerWidth + 10),
+    };
   },
   visible: {
     x: 0,
   },
-  exit: {
-    x: -window.outerWidth - 10,
+  exit: (direction: boolean) => {
+    return {
+      x: direction ? -(window.outerWidth + 10) : window.outerWidth + 10,
+    };
   },
 };
 
@@ -156,23 +190,23 @@ const infoVariants = {
 
 const UpcomingMovie = () => {
   const sliderOffset = 6;
-  const upcomingMatch = useMatch(`/movies/upcoming/:movieId`);
-  const upcomingNavigate = useNavigate();
-  const { data: upcomingData, isLoading } = useQuery(
+  const [direction, setDirection] = useState(true);
+  const topRatedMovieMatch = useMatch(`/movies/upcoming/:movieId`);
+  const topMovieNavigate = useNavigate();
+  const { data: upcomingData } = useQuery(
     ["movies", "upcoming"],
     GetUpcomingMovies
   );
   const [isExit, setIsExit] = useState(false);
-  const [upcomingIndex, setIndex] = useState(0);
+  const [index, setIndex] = useState(0);
   const { scrollY } = useViewportScroll();
-  const detailUpcomingMovie =
-    upcomingMatch?.params.movieId &&
+  const detailMovie =
+    topRatedMovieMatch?.params.movieId &&
     upcomingData?.results.find(
-      (movie: IMovie) => String(movie.id) === upcomingMatch?.params.movieId
+      (movie: IMovie) => String(movie.id) === topRatedMovieMatch?.params.movieId
     );
-  console.log(detailUpcomingMovie);
-  const toggleIsExit = () => setIsExit((prev) => !prev);
-  const increaseIndex = () => {
+  const incraseIndex = () => {
+    setDirection(true);
     if (upcomingData) {
       if (!isExit) {
         toggleIsExit();
@@ -183,6 +217,7 @@ const UpcomingMovie = () => {
     }
   };
   const decraseIndex = () => {
+    setDirection(false);
     if (upcomingData) {
       if (!isExit) {
         toggleIsExit();
@@ -192,80 +227,103 @@ const UpcomingMovie = () => {
       }
     }
   };
+
+  let a = [];
+  let b = [];
+  if (detailMovie) {
+    a = new Array(Math.floor(Math.round(detailMovie.vote_average) / 2)).fill(0);
+    b = new Array(Math.round(detailMovie.vote_average) % 2).fill(0);
+  }
+  const toggleIsExit = () => setIsExit((prev) => !prev);
   const goMovieDetail = (movieId: number) =>
-    upcomingNavigate(`/movies/upcoming/${movieId}`);
-  const onOverlayClick = () => upcomingNavigate("/");
+    topMovieNavigate(`/movies/upcoming/${movieId}`);
+  const onOverlayClick = () => topMovieNavigate("/");
   return (
     <>
-      {isLoading ? (
-        "Loading..."
-      ) : (
-        <>
-          <SliderTitle onClick={increaseIndex}>Upcoming Movies</SliderTitle>
-          <Slider>
-            <AnimatePresence initial={false} onExitComplete={toggleIsExit}>
-              <Row
-                offset={sliderOffset}
-                variants={sliderVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                transition={{ type: "spring", duration: 1 }}
-                key={upcomingIndex}
-              >
-                {upcomingData?.results
-                  .slice(1)
-                  .slice(
-                    upcomingIndex * sliderOffset,
-                    upcomingIndex * sliderOffset + sliderOffset
-                  )
-                  .map((movie: IMovie) => (
-                    <PosterCard
-                      id={String(movie.id) + "upcoming"}
-                      layoutId={String(movie.id) + "upcoming"}
-                      onClick={() => goMovieDetail(movie.id)}
-                      variants={posterVariants}
-                      initial="default"
-                      whileHover="hover"
-                      key={movie.id}
-                      bgurl={makeMovieImageUrl(movie.poster_path, "w500")}
-                    >
-                      <Info variants={infoVariants}>{movie.title}</Info>
-                    </PosterCard>
-                  ))}
-              </Row>
-            </AnimatePresence>
-          </Slider>
-          <AnimatePresence>
-            {upcomingMatch ? (
-              <>
-                <DetailBackdim
-                  onClick={onOverlayClick}
-                  exit={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  initial={{ opacity: 0 }}
-                />
-                <Detail
-                  margin={Math.ceil((window.innerHeight - 700) / 2)}
-                  scroll={scrollY.get()}
-                  layoutId={upcomingMatch?.params.movieId + "upcoming"}
+      <SliderTitle>Upcoming Movies</SliderTitle>
+      <Slider>
+        <Prev onClick={decraseIndex}>
+          <i className="ri-arrow-left-s-line ri-3x"></i>
+        </Prev>
+        <Next onClick={incraseIndex}>
+          <i className="ri-arrow-right-s-line ri-3x"></i>
+        </Next>
+        <AnimatePresence
+          custom={direction}
+          initial={false}
+          onExitComplete={toggleIsExit}
+        >
+          <Row
+            custom={direction}
+            offset={sliderOffset}
+            variants={sliderVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={{ type: "spring", duration: 1 }}
+            key={index}
+          >
+            {upcomingData?.results
+              .slice(1)
+              .slice(index * sliderOffset, index * sliderOffset + sliderOffset)
+              .map((movie: IMovie) => (
+                <PosterCard
+                  layoutId={movie.id.toString() + "upcoming"}
+                  onClick={() => goMovieDetail(movie.id)}
+                  variants={posterVariants}
+                  initial="default"
+                  whileHover="hover"
+                  key={movie.id}
+                  bgurl={makeMovieImageUrl(movie.poster_path, "w500")}
                 >
-                  <DetailImg
-                    src={makeMovieImageUrl(
-                      detailUpcomingMovie.backdrop_path,
-                      "w500"
-                    )}
-                  />
-                  <DetailIntroduction>
-                    <h3>{detailUpcomingMovie.title}</h3>
-                    <p>{detailUpcomingMovie.overview}</p>
-                  </DetailIntroduction>
-                </Detail>
-              </>
-            ) : null}
-          </AnimatePresence>
-        </>
-      )}
+                  <Info variants={infoVariants}>{movie.title}</Info>
+                </PosterCard>
+              ))}
+          </Row>
+        </AnimatePresence>
+      </Slider>
+      <AnimatePresence>
+        {topRatedMovieMatch ? (
+          <>
+            <DetailBackdim
+              onClick={onOverlayClick}
+              exit={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              initial={{ opacity: 0 }}
+            />
+            <Detail
+              height={window.innerHeight - 200}
+              margin={Math.ceil((window.innerHeight - 700) / 2)}
+              scroll={scrollY.get()}
+              layoutId={topRatedMovieMatch?.params.movieId + "upcoming"}
+            >
+              <DetailImg
+                src={
+                  detailMovie
+                    ? makeMovieImageUrl(detailMovie.backdrop_path, "w500")
+                    : "/"
+                }
+              />
+              <DetailIntroduction>
+                <h3>{detailMovie.title}</h3>
+                <p>{detailMovie.overview}</p>
+                <p>release date: {detailMovie.release_date}</p>
+                <div>
+                  rate:
+                  {a.map((item, index) => (
+                    <i key={index} className="ri-star-fill"></i>
+                  ))}
+                  {b.map((item, index) => (
+                    <i key={index} className="ri-star-half-fill"></i>
+                  ))}
+                  ({detailMovie.vote_average}, Total:
+                  {detailMovie.vote_count} votes)
+                </div>
+              </DetailIntroduction>
+            </Detail>
+          </>
+        ) : null}
+      </AnimatePresence>
     </>
   );
 };

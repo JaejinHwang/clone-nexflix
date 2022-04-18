@@ -17,6 +17,29 @@ const Slider = styled.div`
   margin-bottom: 300px;
 `;
 
+const Next = styled(motion.div)`
+  height: 200px;
+  background-color: rgba(0, 0, 0, 0.7);
+  width: 50px;
+  position: absolute;
+  z-index: 10;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+const Prev = styled(motion.div)`
+  height: 200px;
+  background-color: rgba(0, 0, 0, 0.7);
+  width: 50px;
+  position: absolute;
+  z-index: 10;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
 const Row = styled(motion.div)<{ offset: number }>`
   display: grid;
   gap: 10px;
@@ -45,7 +68,7 @@ const Info = styled(motion.div)`
   padding: 10px;
   opacity: 0;
   height: 40px;
-  background-color: ${(props) => props.theme.black.lighter};
+  background-color: ${(props) => props.theme.black.veryDark};
   position: absolute;
   /* bottom: 0px; */
   width: 100%;
@@ -55,12 +78,17 @@ const Info = styled(motion.div)`
   font-size: 16px;
 `;
 
-const Detail = styled(motion.div)<{ scroll: number; margin: number }>`
+const Detail = styled(motion.div)<{
+  scroll: number;
+  margin: number;
+  height: number;
+}>`
   width: 500px;
   height: 700px;
-  background-color: grey;
+  background-color: ${(props) => props.theme.black.veryDark};
   position: absolute;
-  top: ${(props) => props.scroll + props.margin}px;
+  top: ${(props) => props.scroll + props.margin - props.height}px;
+
   left: 0;
   right: 0;
   /* bottom: 0; */
@@ -116,14 +144,18 @@ const DetailIntroduction = styled.div`
 `;
 
 const sliderVariants = {
-  hidden: {
-    x: window.outerWidth + 10,
+  hidden: (direction: boolean) => {
+    return {
+      x: direction ? window.outerWidth + 10 : -(window.outerWidth + 10),
+    };
   },
   visible: {
     x: 0,
   },
-  exit: {
-    x: -window.outerWidth - 10,
+  exit: (direction: boolean) => {
+    return {
+      x: direction ? -(window.outerWidth + 10) : window.outerWidth + 10,
+    };
   },
 };
 
@@ -161,7 +193,7 @@ const NowPlayingMovie = () => {
   const movieMatch = useMatch(`/movies/now_playing/:movieId`);
   const movieNavigate = useNavigate();
   const { data: nowPlayingData } = useQuery(
-    ["movies", "nowPlaying"],
+    ["movies", "now_playing"],
     GetNowPlayingMovies
   );
   const [isExit, setIsExit] = useState(false);
@@ -172,11 +204,9 @@ const NowPlayingMovie = () => {
     nowPlayingData?.results.find(
       (movie: IMovie) => String(movie.id) === movieMatch?.params.movieId
     );
-  const { data: nowPlayingDetailData } = useQuery(
-    ["movies", "nowPlaying"],
-    GetNowPlayingMovies
-  );
+  const [direction, setDirection] = useState(true);
   const incraseIndex = () => {
+    setDirection(true);
     if (nowPlayingData) {
       if (!isExit) {
         toggleIsExit();
@@ -186,19 +216,47 @@ const NowPlayingMovie = () => {
       }
     }
   };
-  const decraseIndex = () => setIndex((prev) => (prev === 0 ? 2 : prev - 1));
+  const decraseIndex = () => {
+    setDirection(false);
+    if (nowPlayingData) {
+      if (!isExit) {
+        toggleIsExit();
+        const totalMovies = nowPlayingData.results.length - 1;
+        const maxIndex = Math.floor(totalMovies / sliderOffset) - 1;
+        setIndex((prev) => (prev === 0 ? maxIndex : prev - 1));
+      }
+    }
+  };
   const toggleIsExit = () => setIsExit((prev) => !prev);
   const goMovieDetail = (movieId: number) =>
     movieNavigate(`/movies/now_playing/${movieId}`);
   const onOverlayClick = () => movieNavigate("/");
+  let a = [];
+  let b = [];
+  if (detailMovie) {
+    a = new Array(Math.floor(Math.round(detailMovie.vote_average) / 2)).fill(0);
+    b = new Array(Math.round(detailMovie.vote_average) % 2).fill(0);
+  }
+
   return (
     <>
       <SliderTitle onClick={incraseIndex}>Now Playing Movies</SliderTitle>
       <Slider>
-        <AnimatePresence initial={false} onExitComplete={toggleIsExit}>
+        <Prev onClick={decraseIndex}>
+          <i className="ri-arrow-left-s-line ri-3x"></i>
+        </Prev>
+        <Next onClick={incraseIndex}>
+          <i className="ri-arrow-right-s-line ri-3x"></i>
+        </Next>
+        <AnimatePresence
+          custom={direction}
+          initial={false}
+          onExitComplete={toggleIsExit}
+        >
           <Row
             offset={sliderOffset}
             variants={sliderVariants}
+            custom={direction}
             initial="hidden"
             animate="visible"
             exit="exit"
@@ -210,7 +268,7 @@ const NowPlayingMovie = () => {
               .slice(index * sliderOffset, index * sliderOffset + sliderOffset)
               .map((movie: IMovie) => (
                 <PosterCard
-                  layoutId={movie.id.toString() + "latest"}
+                  layoutId={movie.id.toString() + "now_playing"}
                   onClick={() => goMovieDetail(movie.id)}
                   variants={posterVariants}
                   initial="default"
@@ -234,9 +292,10 @@ const NowPlayingMovie = () => {
               initial={{ opacity: 0 }}
             />
             <Detail
+              height={window.innerHeight - 200}
               margin={Math.ceil((window.innerHeight - 700) / 2)}
               scroll={scrollY.get()}
-              layoutId={movieMatch?.params.movieId + "latest"}
+              layoutId={movieMatch?.params.movieId + "now_playing"}
             >
               <DetailImg
                 src={
@@ -248,6 +307,18 @@ const NowPlayingMovie = () => {
               <DetailIntroduction>
                 <h3>{detailMovie.title}</h3>
                 <p>{detailMovie.overview}</p>
+                <p>release date: {detailMovie.release_date}</p>
+                <div>
+                  rate:
+                  {a.map((item, index) => (
+                    <i key={index} className="ri-star-fill"></i>
+                  ))}
+                  {b.map((item, index) => (
+                    <i key={index} className="ri-star-half-fill"></i>
+                  ))}
+                  ({detailMovie.vote_average}, Total:
+                  {detailMovie.vote_count} votes)
+                </div>
               </DetailIntroduction>
             </Detail>
           </>

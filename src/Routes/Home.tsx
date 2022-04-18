@@ -1,15 +1,12 @@
-import { match } from "assert";
-import { AnimatePresence, motion, useViewportScroll } from "framer-motion";
-import { useEffect, useState } from "react";
-import { useQuery } from "react-query";
-import { useMatch, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { GetPopularMovies, IMovie } from "../api";
+import { GetPopularMovies } from "../api";
 import NowPlayingMovie from "../Components/NowPlayingMovie";
 import PopularMovie from "../Components/PopularMovie";
 import TopRatedMovie from "../Components/TopRatedMovie";
 import UpcomingMovie from "../Components/UpcomingMovie";
 import { makeMovieImageUrl } from "../utils";
+import { Helmet } from "react-helmet";
+import { useQuery } from "react-query";
 
 const Background = styled.div<{ bgUrl: string }>`
   width: 100%;
@@ -45,41 +42,18 @@ const Overview = styled.p`
 `;
 
 const SliderContainer = styled.div`
-  /* top: -200px; */
+  position: relative;
+  top: -200px;
 `;
 
 function Home() {
-  const sliderOffset = 6;
   const { data, isLoading } = useQuery(["Movie", "Popular"], GetPopularMovies);
-  const movieNavigate = useNavigate();
-  const movieMatch = useMatch("/movies/:movieId");
-  const { scrollY } = useViewportScroll();
-  const detailMovie =
-    movieMatch?.params.movieId &&
-    data?.results.find(
-      (movie: IMovie) => String(movie.id) === movieMatch?.params.movieId
-    );
-  const [index, setIndex] = useState(0);
-  const [isExit, setIsExit] = useState(false);
-  const toggleIsExit = () => setIsExit((prev) => !prev);
-  const incraseIndex = () => {
-    if (data) {
-      if (!isExit) {
-        toggleIsExit();
-        const totalMovies = data.results.length - 1;
-        const maxIndex = Math.floor(totalMovies / sliderOffset) - 1;
-        setIndex((prev) => (prev === maxIndex ? 0 : prev + 1));
-      }
-    }
-  };
-  const decraseIndex = () => setIndex((prev) => (prev === 0 ? 2 : prev - 1));
-  const goMovieDetail = (movieId: number) =>
-    movieNavigate(`/movies/${movieId}`);
-  const onOverlayClick = () => movieNavigate("/");
   return (
     <>
+      <Helmet>
+        <title>Movies</title>
+      </Helmet>
       <Background
-        onClick={incraseIndex}
         bgUrl={makeMovieImageUrl(data?.results[0].backdrop_path || "")}
       >
         {isLoading ? (

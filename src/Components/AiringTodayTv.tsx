@@ -1,10 +1,15 @@
 import { AnimatePresence, motion, useViewportScroll } from "framer-motion";
 import { useState } from "react";
-import { Helmet } from "react-helmet";
 import { useQuery } from "react-query";
 import { useMatch, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { GetPopularMovies, IMovie } from "../api";
+import {
+  GetAiringTodayTvs,
+  GetPopularMovies,
+  GetPopularTvs,
+  IMovie,
+  ITv,
+} from "../api";
 import { makeMovieImageUrl } from "../utils";
 
 const SliderTitle = styled.h3`
@@ -189,59 +194,59 @@ const infoVariants = {
   },
 };
 
-const PopularMovie = () => {
+const AiringTodayTv = () => {
   const sliderOffset = 6;
-  const movieMatch = useMatch(`/movies/popular/:movieId`);
-  const movieNavigate = useNavigate();
-  const { data: popularData } = useQuery(
-    ["movies", "popular"],
-    GetPopularMovies
+  const tvMatch = useMatch(`/tv/airing_today/:tvId`);
+  const tvNavigate = useNavigate();
+  const { data: airingTodayTvData } = useQuery(
+    ["tv", "airing_today"],
+    GetAiringTodayTvs
   );
   const [isExit, setIsExit] = useState(false);
   const [index, setIndex] = useState(0);
   const { scrollY } = useViewportScroll();
-  const detailMovie =
-    movieMatch?.params.movieId &&
-    popularData?.results.find(
-      (movie: IMovie) => String(movie.id) === movieMatch?.params.movieId
+  const detailTv =
+    tvMatch?.params.tvId &&
+    airingTodayTvData?.results.find(
+      (tv: ITv) => String(tv.id) === tvMatch?.params.tvId
     );
   const [direction, setDirection] = useState(true);
   const incraseIndex = () => {
     setDirection(true);
-    if (popularData) {
+    if (airingTodayTvData) {
       if (!isExit) {
         toggleIsExit();
-        const totalMovies = popularData.results.length - 1;
-        const maxIndex = Math.floor(totalMovies / sliderOffset) - 1;
+        const totalTvs = airingTodayTvData.results.length - 1;
+        const maxIndex = Math.floor(totalTvs / sliderOffset) - 1;
         setIndex((prev) => (prev === maxIndex ? 0 : prev + 1));
       }
     }
   };
   const decraseIndex = () => {
     setDirection(false);
-    if (popularData) {
+    if (airingTodayTvData) {
       if (!isExit) {
         toggleIsExit();
-        const totalMovies = popularData.results.length - 1;
+        const totalMovies = airingTodayTvData.results.length - 1;
         const maxIndex = Math.floor(totalMovies / sliderOffset) - 1;
         setIndex((prev) => (prev === 0 ? maxIndex : prev - 1));
       }
     }
   };
   const toggleIsExit = () => setIsExit((prev) => !prev);
-  const goMovieDetail = (movieId: number) =>
-    movieNavigate(`/movies/popular/${movieId}`);
-  const onOverlayClick = () => movieNavigate("/");
+  const goMovieDetail = (tvId: number) =>
+    tvNavigate(`/tv/airing_today/${tvId}`);
+  const onOverlayClick = () => tvNavigate("/tv");
   let a = [];
   let b = [];
-  if (detailMovie) {
-    a = new Array(Math.floor(Math.round(detailMovie.vote_average) / 2)).fill(0);
-    b = new Array(Math.round(detailMovie.vote_average) % 2).fill(0);
+  if (detailTv) {
+    a = new Array(Math.floor(Math.round(detailTv.vote_average) / 2)).fill(0);
+    b = new Array(Math.round(detailTv.vote_average) % 2).fill(0);
   }
 
   return (
     <>
-      <SliderTitle onClick={incraseIndex}>Popular Movies</SliderTitle>
+      <SliderTitle onClick={incraseIndex}>Tv Shows Airing Today</SliderTitle>
       <Slider>
         <Prev onClick={decraseIndex}>
           <i className="ri-arrow-left-s-line ri-3x"></i>
@@ -264,27 +269,27 @@ const PopularMovie = () => {
             transition={{ type: "spring", duration: 1 }}
             key={index}
           >
-            {popularData?.results
+            {airingTodayTvData?.results
               .slice(1)
               .slice(index * sliderOffset, index * sliderOffset + sliderOffset)
-              .map((movie: IMovie) => (
+              .map((tv: ITv) => (
                 <PosterCard
-                  layoutId={movie.id.toString() + "popular"}
-                  onClick={() => goMovieDetail(movie.id)}
+                  layoutId={tv.id.toString() + "airing_today"}
+                  onClick={() => goMovieDetail(tv.id)}
                   variants={posterVariants}
                   initial="default"
                   whileHover="hover"
-                  key={movie.id}
-                  bgurl={makeMovieImageUrl(movie.poster_path, "w500")}
+                  key={tv.id}
+                  bgurl={makeMovieImageUrl(tv.poster_path, "w500")}
                 >
-                  <Info variants={infoVariants}>{movie.title}</Info>
+                  <Info variants={infoVariants}>{tv.name}</Info>
                 </PosterCard>
               ))}
           </Row>
         </AnimatePresence>
       </Slider>
       <AnimatePresence>
-        {movieMatch ? (
+        {tvMatch ? (
           <>
             <DetailBackdim
               onClick={onOverlayClick}
@@ -296,29 +301,29 @@ const PopularMovie = () => {
               margin={Math.ceil((window.innerHeight - 700) / 2)}
               scroll={scrollY.get()}
               height={window.innerHeight - 200}
-              layoutId={movieMatch?.params.movieId + "popular"}
+              layoutId={tvMatch?.params.tvId + "airing_today"}
             >
               <DetailImg
                 src={
-                  detailMovie
-                    ? makeMovieImageUrl(detailMovie.backdrop_path, "w500")
+                  detailTv
+                    ? makeMovieImageUrl(detailTv.backdrop_path, "w500")
                     : "/"
                 }
               />
               <DetailIntroduction>
-                <h3>{detailMovie.title}</h3>
-                <p>{detailMovie.overview}</p>
-                <p>release date: {detailMovie.release_date}</p>
+                <h3>{detailTv.name}</h3>
+                <p>{detailTv.overview}</p>
+                <p>First air date: {detailTv.first_air_date}</p>
                 <div>
-                  rate:
+                  Rate:
                   {a.map((item, index) => (
                     <i key={index} className="ri-star-fill"></i>
                   ))}
                   {b.map((item, index) => (
                     <i key={index} className="ri-star-half-fill"></i>
                   ))}
-                  ({detailMovie.vote_average}, Total:
-                  {detailMovie.vote_count} votes)
+                  ({detailTv.vote_average}, Total:
+                  {detailTv.vote_count} votes)
                 </div>
               </DetailIntroduction>
             </Detail>
@@ -329,4 +334,4 @@ const PopularMovie = () => {
   );
 };
 
-export default PopularMovie;
+export default AiringTodayTv;

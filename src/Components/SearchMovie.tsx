@@ -1,10 +1,9 @@
 import { AnimatePresence, motion, useViewportScroll } from "framer-motion";
 import { useState } from "react";
-import { Helmet } from "react-helmet";
 import { useQuery } from "react-query";
 import { useMatch, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { GetPopularMovies, IMovie } from "../api";
+import { GetSearchedMovies, IMovie } from "../api";
 import { makeMovieImageUrl } from "../utils";
 
 const SliderTitle = styled.h3`
@@ -50,6 +49,7 @@ const Row = styled(motion.div)<{ offset: number }>`
 `;
 
 const PosterCard = styled(motion.div)<{ bgurl: string }>`
+  background-color: ${(props) => props.theme.black.veryDark};
   background-image: url(${(props) => props.bgurl});
   background-size: cover;
   display: flex;
@@ -189,49 +189,53 @@ const infoVariants = {
   },
 };
 
-const PopularMovie = () => {
+const SearchMovie = ({ search }: any) => {
+  console.log(search);
   const sliderOffset = 6;
-  const movieMatch = useMatch(`/movies/popular/:movieId`);
+  const SearchMatch = useMatch(`/search/:movieId`);
   const movieNavigate = useNavigate();
-  const { data: popularData } = useQuery(
-    ["movies", "popular"],
-    GetPopularMovies
+  const { data: searchMovieData, isLoading: moviesLoading } = useQuery(
+    ["search", "movies", `${search}`],
+    () => GetSearchedMovies(search)
   );
+  // console.log(searchMovieData, search);
+  console.log(search, SearchMatch);
   const [isExit, setIsExit] = useState(false);
   const [index, setIndex] = useState(0);
   const { scrollY } = useViewportScroll();
   const detailMovie =
-    movieMatch?.params.movieId &&
-    popularData?.results.find(
-      (movie: IMovie) => String(movie.id) === movieMatch?.params.movieId
+    SearchMatch?.params.movieId &&
+    searchMovieData?.results.find(
+      (movie: IMovie) => String(movie.id) === SearchMatch?.params.movieId
     );
   const [direction, setDirection] = useState(true);
+  console.log(search, searchMovieData);
   const incraseIndex = () => {
     setDirection(true);
-    if (popularData) {
+    if (searchMovieData) {
       if (!isExit) {
         toggleIsExit();
-        const totalMovies = popularData.results.length - 1;
-        const maxIndex = Math.floor(totalMovies / sliderOffset) - 1;
+        const totalMovies = searchMovieData.results.length;
+        const maxIndex = Math.ceil(totalMovies / sliderOffset) - 1;
         setIndex((prev) => (prev === maxIndex ? 0 : prev + 1));
       }
     }
   };
   const decraseIndex = () => {
     setDirection(false);
-    if (popularData) {
+    if (searchMovieData) {
       if (!isExit) {
         toggleIsExit();
-        const totalMovies = popularData.results.length - 1;
-        const maxIndex = Math.floor(totalMovies / sliderOffset) - 1;
+        const totalMovies = searchMovieData.results.length;
+        const maxIndex = Math.ceil(totalMovies / sliderOffset) - 1;
         setIndex((prev) => (prev === 0 ? maxIndex : prev - 1));
       }
     }
   };
   const toggleIsExit = () => setIsExit((prev) => !prev);
   const goMovieDetail = (movieId: number) =>
-    movieNavigate(`/movies/popular/${movieId}`);
-  const onOverlayClick = () => movieNavigate("/");
+    movieNavigate(`/search/${movieId}`);
+  const onOverlayClick = () => movieNavigate(`/search?search=${search}`);
   let a = [];
   let b = [];
   if (detailMovie) {
@@ -241,7 +245,9 @@ const PopularMovie = () => {
 
   return (
     <>
-      <SliderTitle onClick={incraseIndex}>Popular Movies</SliderTitle>
+      <SliderTitle onClick={incraseIndex}>
+        {searchMovieData?.results.length} Movies related with '{search}'
+      </SliderTitle>
       <Slider>
         <Prev onClick={decraseIndex}>
           <i className="ri-arrow-left-s-line ri-3x"></i>
@@ -264,13 +270,12 @@ const PopularMovie = () => {
             transition={{ type: "spring", duration: 1 }}
             key={index}
           >
-            {popularData?.results
-              .slice(1)
+            {searchMovieData?.results
               .slice(index * sliderOffset, index * sliderOffset + sliderOffset)
               .map((movie: IMovie) => (
                 <PosterCard
                   layoutId={movie.id.toString() + "popular"}
-                  onClick={() => goMovieDetail(movie.id)}
+                  // onClick={() => goMovieDetail(movie.id)}
                   variants={posterVariants}
                   initial="default"
                   whileHover="hover"
@@ -284,7 +289,7 @@ const PopularMovie = () => {
         </AnimatePresence>
       </Slider>
       <AnimatePresence>
-        {movieMatch ? (
+        {SearchMatch ? (
           <>
             <DetailBackdim
               onClick={onOverlayClick}
@@ -296,7 +301,7 @@ const PopularMovie = () => {
               margin={Math.ceil((window.innerHeight - 700) / 2)}
               scroll={scrollY.get()}
               height={window.innerHeight - 200}
-              layoutId={movieMatch?.params.movieId + "popular"}
+              layoutId={SearchMatch?.params.movieId + "popular"}
             >
               <DetailImg
                 src={
@@ -329,4 +334,4 @@ const PopularMovie = () => {
   );
 };
 
-export default PopularMovie;
+export default SearchMovie;
