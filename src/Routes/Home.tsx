@@ -1,8 +1,14 @@
-import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { match } from "assert";
+import { AnimatePresence, motion, useViewportScroll } from "framer-motion";
+import { useEffect, useState } from "react";
 import { useQuery } from "react-query";
+import { useMatch, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { GetPopularMovies, IMovie } from "../api";
+import NowPlayingMovie from "../Components/NowPlayingMovie";
+import PopularMovie from "../Components/PopularMovie";
+import TopRatedMovie from "../Components/TopRatedMovie";
+import UpcomingMovie from "../Components/UpcomingMovie";
 import { makeMovieImageUrl } from "../utils";
 
 const Background = styled.div<{ bgUrl: string }>`
@@ -38,89 +44,21 @@ const Overview = styled.p`
   line-height: 1.25em;
 `;
 
-const Slider = styled.div`
-  width: 100%;
-  position: relative;
-  top: -100px;
-  padding-bottom: 3000px;
+const SliderContainer = styled.div`
+  /* top: -200px; */
 `;
-
-const Row = styled(motion.div)<{ offset: number }>`
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(${(props) => props.offset}, 1fr);
-  position: absolute;
-  width: 100%;
-`;
-
-const PosterCard = styled(motion.div)<{ bgUrl: string }>`
-  background-image: url(${(props) => props.bgUrl});
-  background-size: cover;
-  background-position: center center;
-  height: 200px;
-  &: first-child {
-    transform-origin: center left;
-  }
-  &: last-child {
-    transform-origin: center right;
-  }
-`;
-
-const Info = styled(motion.div)`
-  padding: 10px;
-  // opacity: 0;
-  height: 40px;
-  background-color: ${(props) => props.theme.black.lighter};
-  position: absolute;
-  bottom: 0px;
-  width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 16px;
-`;
-
-const sliderVariants = {
-  hidden: {
-    x: window.outerWidth + 10,
-  },
-  visible: {
-    x: 0,
-  },
-  exit: {
-    x: -window.outerWidth - 10,
-  },
-};
-
-const posterVariants = {
-  default: {
-    scale: 1,
-  },
-  hover: {
-    scale: 1.3,
-    transition: {
-      delay: 0.25,
-      type: "tween",
-    },
-  },
-};
-
-const infoVariants = {
-  default: {
-    opacity: 0,
-  },
-  hover: {
-    opacity: 1,
-    transition: {
-      delay: 0.25,
-      type: "tween",
-    },
-  },
-};
 
 function Home() {
   const sliderOffset = 6;
   const { data, isLoading } = useQuery(["Movie", "Popular"], GetPopularMovies);
+  const movieNavigate = useNavigate();
+  const movieMatch = useMatch("/movies/:movieId");
+  const { scrollY } = useViewportScroll();
+  const detailMovie =
+    movieMatch?.params.movieId &&
+    data?.results.find(
+      (movie: IMovie) => String(movie.id) === movieMatch?.params.movieId
+    );
   const [index, setIndex] = useState(0);
   const [isExit, setIsExit] = useState(false);
   const toggleIsExit = () => setIsExit((prev) => !prev);
@@ -135,9 +73,13 @@ function Home() {
     }
   };
   const decraseIndex = () => setIndex((prev) => (prev === 0 ? 2 : prev - 1));
+  const goMovieDetail = (movieId: number) =>
+    movieNavigate(`/movies/${movieId}`);
+  const onOverlayClick = () => movieNavigate("/");
   return (
     <>
       <Background
+        onClick={incraseIndex}
         bgUrl={makeMovieImageUrl(data?.results[0].backdrop_path || "")}
       >
         {isLoading ? (
@@ -149,34 +91,12 @@ function Home() {
           </Introduction>
         )}
       </Background>
-      <Slider onClick={incraseIndex}>
-        <AnimatePresence initial={false} onExitComplete={toggleIsExit}>
-          <Row
-            offset={sliderOffset}
-            variants={sliderVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            transition={{ type: "spring", duration: 1 }}
-            key={index}
-          >
-            {data?.results
-              .slice(1)
-              .slice(index * sliderOffset, index * sliderOffset + sliderOffset)
-              .map((movie: IMovie) => (
-                <PosterCard
-                  variants={posterVariants}
-                  initial="default"
-                  whileHover="hover"
-                  key={movie.id}
-                  bgUrl={makeMovieImageUrl(movie.poster_path, "w500")}
-                >
-                  <Info variants={infoVariants}>{movie.title}</Info>
-                </PosterCard>
-              ))}
-          </Row>
-        </AnimatePresence>
-      </Slider>
+      <SliderContainer>
+        <PopularMovie />
+        <TopRatedMovie />
+        <NowPlayingMovie />
+        <UpcomingMovie />
+      </SliderContainer>
     </>
   );
 }

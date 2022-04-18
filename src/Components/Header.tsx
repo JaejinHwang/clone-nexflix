@@ -1,9 +1,10 @@
-import { Link, useMatch } from "react-router-dom";
+import { Link, useMatch, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { motion, useAnimation, useViewportScroll } from "framer-motion";
 import { useEffect, useState } from "react";
 
 const Nav = styled(motion.nav)`
+  z-index: 50;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -108,7 +109,9 @@ const navVariants = {
 
 function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
+  const navigate = useNavigate();
   const homeMatch = useMatch("/");
+  const movieMatch = useMatch("/movies/*");
   const tvMatch = useMatch("/tv");
   const inputAnimation = useAnimation();
   const navAnimation = useAnimation();
@@ -136,6 +139,7 @@ function Header() {
     <Nav variants={navVariants} animate={navAnimation} initial={"top"}>
       <Col>
         <Logo
+          onClick={() => navigate("/")}
           variants={logoVariants}
           whileHover="active"
           animate="normal"
@@ -149,7 +153,8 @@ function Header() {
         <Items>
           <Item>
             <Link to="/">
-              Home {homeMatch && <UnderBar layoutId="underbar" />}
+              Home
+              {(homeMatch || movieMatch) && <UnderBar layoutId="underbar" />}
             </Link>
           </Item>
           <Item>
